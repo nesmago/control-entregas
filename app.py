@@ -6,21 +6,17 @@ app = Flask(__name__)
 app.secret_key = "tu_clave_secreta"
 DATABASE = "db.sqlite3"
 
-# Crear base de datos si no existe
 def init_db():
     if not os.path.exists(DATABASE):
         conn = sqlite3.connect(DATABASE)
         c = conn.cursor()
-
         c.execute('''
         CREATE TABLE IF NOT EXISTS usuarios (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             usuario TEXT UNIQUE,
             clave TEXT
-        )
-        ''')
+        )''')
         c.execute("INSERT OR IGNORE INTO usuarios (usuario, clave) VALUES ('admin', '1234')")
-
         c.execute('''
         CREATE TABLE IF NOT EXISTS facturas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -29,9 +25,7 @@ def init_db():
             fecha TEXT,
             producto TEXT,
             cantidad_total INTEGER
-        )
-        ''')
-
+        )''')
         c.execute('''
         CREATE TABLE IF NOT EXISTS entregas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,9 +33,7 @@ def init_db():
             producto TEXT,
             cantidad_entregada INTEGER,
             recibido_por TEXT
-        )
-        ''')
-
+        )''')
         conn.commit()
         conn.close()
 

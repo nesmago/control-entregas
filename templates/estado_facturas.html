@@ -1,39 +1,17 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Estado de Facturas</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
-</head>
-<body>
-<div class="container mt-4">
-    <h3>Estado de facturas</h3>
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>Factura</th>
-                <th>Producto</th>
-                <th>Cantidad Total</th>
-                <th>Entregado</th>
-                <th>Pendiente</th>
-                <th>Estado</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for row in resumen %}
-            <tr class="{% if row.estado == 'Entregada' %}table-success{% elif row.estado == 'Parcial' %}table-warning{% else %}table-danger{% endif %}">
-                <td>{{ row.factura }}</td>
-                <td>{{ row.producto }}</td>
-                <td>{{ row.total }}</td>
-                <td>{{ row.entregado }}</td>
-                <td>{{ row.pendiente }}</td>
-                <td><strong>{{ row.estado }}</strong></td>
-            </tr>
-            {% endfor %}
-        </tbody>
+  <head><meta charset="utf-8"><title>Estado de Facturas</title></head>
+  <body>
+    <h2>Estado de Facturas</h2>
+    <table border="1">
+      <tr><th>Factura</th><th>Producto</th><th>Total</th><th>Entregado</th><th>Pendiente</th><th>Estado</th></tr>
+      {% for r in resumen %}
+      <tr>
+        <td>{{ r.factura }}</td><td>{{ r.producto }}</td><td>{{ r.total }}</td>
+        <td>{{ r.entregado }}</td><td>{{ r.pendiente }}</td><td>{{ r.estado }}</td>
+      </tr>
+      {% endfor %}
     </table>
-    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Volver</a>
-</div>
-</body>
+    <a href="/dashboard">Volver</a>
+  </body>
 </html>
