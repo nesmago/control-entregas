@@ -1,133 +1,112 @@
-from flask import Flask, render_template, request, redirect, url_for, session, g
-import sqlite3
+from flask import Flask, render_template, request, redirect, session
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import func
 import os
 
 app = Flask(__name__)
-app.secret_key = "tu_clave_secreta"
-DATABASE = "db.sqlite3"
+app.secret_key = "controlentregas"
 
-def init_db():
-    if not os.path.exists(DATABASE):
-        conn = sqlite3.connect(DATABASE)
-        c = conn.cursor()
-        c.execute('''
-        CREATE TABLE IF NOT EXISTS usuarios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            usuario TEXT UNIQUE,
-            clave TEXT
-        )''')
-        c.execute("INSERT OR IGNORE INTO usuarios (usuario, clave) VALUES ('admin', '1234')")
-        c.execute('''
-        CREATE TABLE IF NOT EXISTS facturas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            factura TEXT,
-            proveedor TEXT,
-            fecha TEXT,
-            producto TEXT,
-            cantidad_total INTEGER
-        )''')
-        c.execute('''
-        CREATE TABLE IF NOT EXISTS entregas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            factura TEXT,
-            producto TEXT,
-            cantidad_entregada INTEGER,
-            recibido_por TEXT
-        )''')
-        conn.commit()
-        conn.close()
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///facturas.db").replace("postgres://", "postgresql://")
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+db = SQLAlchemy(app)
 
-init_db()
+class Usuario(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(50), unique=True, nullable=False)
 
-def get_db():
-    db = getattr(g, '_database', None)
-    if db is None:
-        db = g._database = sqlite3.connect(DATABASE)
-    return db
+class Factura(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    numero = db.Column(db.String(50))
+    producto = db.Column(db.String(100))
+    cantidad_total = db.Column(db.Integer)
 
-@app.teardown_appcontext
-def close_connection(exception):
-    db = getattr(g, '_database', None)
-    if db is not None:
-        db.close()
+class Entrega(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    factura_id = db.Column(db.Integer, db.ForeignKey("factura.id"))
+    cantidad_entregada = db.Column(db.Integer)
+    recibido_por = db.Column(db.String(50))
 
-@app.route("/", methods=["GET", "POST"])
+@app.route("/")
+def index():
+    return redirect("/login")
+
+@app.route("/login", methods=["GET", "POST"])
 def login():
-    error = None
     if request.method == "POST":
-        usuario = request.form["usuario"]
-        clave = request.form["clave"]
-        cur = get_db().cursor()
-        cur.execute("SELECT * FROM usuarios WHERE usuario=? AND clave=?", (usuario, clave))
-        user = cur.fetchone()
-        if user:
-            session["usuario"] = usuario
-            return redirect(url_for("dashboard"))
-        else:
-            error = "Credenciales incorrectas"
-    return render_template("login.html", error=error)
+        nombre = request.form["usuario"]
+        usuario = Usuario.query.filter_by(nombre=nombre).first()
+        if usuario:
+            session["usuario"] = usuario.nombre
+            return redirect("/dashboard")
+    return render_template("login.html")
 
 @app.route("/logout")
 def logout():
-    session.pop("usuario", None)
-    return redirect(url_for("login"))
+    session.clear()
+    return redirect("/login")
 
 @app.route("/dashboard")
 def dashboard():
     if "usuario" not in session:
-        return redirect(url_for("login"))
+        return redirect("/login")
     return render_template("dashboard.html", usuario=session["usuario"])
 
 @app.route("/registrar_factura", methods=["GET", "POST"])
 def registrar_factura():
     if "usuario" not in session:
-        return redirect(url_for("login"))
+        return redirect("/login")
     if request.method == "POST":
-        factura = request.form["factura"]
-        proveedor = request.form["proveedor"]
-        fecha = request.form["fecha"]
+        numero = request.form["numero"]
         producto = request.form["producto"]
-        cantidad = request.form["cantidad"]
-        con = get_db()
-        con.execute("INSERT INTO facturas (factura, proveedor, fecha, producto, cantidad_total) VALUES (?, ?, ?, ?, ?)",
-                    (factura, proveedor, fecha, producto, cantidad))
-        con.commit()
-        return redirect(url_for("dashboard"))
+        cantidad = int(request.form["cantidad"])
+        f = Factura(numero=numero, producto=producto, cantidad_total=cantidad)
+        db.session.add(f)
+        db.session.commit()
+        return redirect("/dashboard")
     return render_template("registrar_factura.html")
 
 @app.route("/registrar_entrega", methods=["GET", "POST"])
 def registrar_entrega():
     if "usuario" not in session:
-        return redirect(url_for("login"))
-    con = get_db()
-    facturas = con.execute("SELECT DISTINCT factura FROM facturas").fetchall()
+        return redirect("/login")
+    facturas = Factura.query.all()
     if request.method == "POST":
-        factura = request.form["factura"]
-        producto = request.form["producto"]
-        cantidad = request.form["cantidad"]
-        usuario = session["usuario"]
-        con.execute("INSERT INTO entregas (factura, producto, cantidad_entregada, recibido_por) VALUES (?, ?, ?, ?)",
-                    (factura, producto, cantidad, usuario))
-        con.commit()
-        return redirect(url_for("dashboard"))
+        factura_id = int(request.form["factura_id"])
+        cantidad = int(request.form["cantidad_entregada"])
+        recibido = session["usuario"]
+        e = Entrega(factura_id=factura_id, cantidad_entregada=cantidad, recibido_por=recibido)
+        db.session.add(e)
+        db.session.commit()
+        return redirect("/dashboard")
     return render_template("registrar_entrega.html", facturas=facturas)
 
 @app.route("/estado_facturas")
 def estado_facturas():
     if "usuario" not in session:
-        return redirect(url_for("login"))
-    con = get_db()
+        return redirect("/login")
     resumen = []
-    query = "SELECT factura, producto, SUM(cantidad_total) FROM facturas GROUP BY factura, producto"
-    for factura, producto, total in con.execute(query):
-        cur = con.execute("SELECT SUM(cantidad_entregada) FROM entregas WHERE factura=? AND producto=?", (factura, producto))
-        entregado = cur.fetchone()[0] or 0
-        pendiente = int(total) - int(entregado)
+    facturas = Factura.query.all()
+    for f in facturas:
+        entregado = db.session.query(func.sum(Entrega.cantidad_entregada))            .filter_by(factura_id=f.id).scalar() or 0
+        pendiente = f.cantidad_total - entregado
+        estado = "Pendiente"
         if entregado == 0:
             estado = "Pendiente"
-        elif pendiente == 0:
-            estado = "Entregada"
-        else:
+        elif entregado < f.cantidad_total:
             estado = "Parcial"
-        resumen.append({"factura": factura, "producto": producto, "total": total, "entregado": entregado, "pendiente": pendiente, "estado": estado})
+        else:
+            estado = "Entregada"
+        resumen.append({
+            "factura": f.numero,
+            "producto": f.producto,
+            "total": f.cantidad_total,
+            "entregado": entregado,
+            "pendiente": pendiente,
+            "estado": estado
+        })
     return render_template("estado_facturas.html", resumen=resumen)
+
+if __name__ == "__main__":
+    with app.app_context():
+        db.create_all()
+    app.run(debug=True)

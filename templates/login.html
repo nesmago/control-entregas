@@ -1,13 +1,7 @@
 <!doctype html>
-<html lang="es">
-  <head><meta charset="utf-8"><title>Login</title></head>
-  <body>
-    <h2>Iniciar Sesión</h2>
-    {% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
-    <form method="post">
-      Usuario: <input name="usuario"><br>
-      Clave: <input type="password" name="clave"><br>
-      <button type="submit">Entrar</button>
-    </form>
-  </body>
-</html>
+<html><body>
+<form method="post">
+  <input name="usuario" placeholder="Usuario" required>
+  <button type="submit">Entrar</button>
+</form>
+</body></html>

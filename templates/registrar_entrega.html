@@ -1,19 +1,12 @@
 <!doctype html>
-<html lang="es">
-  <head><meta charset="utf-8"><title>Nueva Entrega</title></head>
-  <body>
-    <h2>Registrar Entrega</h2>
-    <form method="post">
-      Factura:
-      <select name="factura">
-        {% for f in facturas %}
-        <option value="{{ f[0] }}">{{ f[0] }}</option>
-        {% endfor %}
-      </select><br>
-      Producto: <input name="producto"><br>
-      Cantidad Entregada: <input name="cantidad"><br>
-      <button type="submit">Guardar</button>
-    </form>
-    <a href="/dashboard">Volver</a>
-  </body>
-</html>
+<html><body>
+<form method="post">
+  <select name="factura_id">
+    {% for f in facturas %}
+    <option value="{{ f.id }}">{{ f.numero }} - {{ f.producto }}</option>
+    {% endfor %}
+  </select>
+  <input name="cantidad_entregada" type="number" placeholder="Cantidad entregada" required>
+  <button type="submit">Registrar</button>
+</form>
+</body></html>

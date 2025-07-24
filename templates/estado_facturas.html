@@ -1,17 +1,1 @@
-<!doctype html>
-<html lang="es">
-  <head><meta charset="utf-8"><title>Estado de Facturas</title></head>
-  <body>
-    <h2>Estado de Facturas</h2>
-    <table border="1">
-      <tr><th>Factura</th><th>Producto</th><th>Total</th><th>Entregado</th><th>Pendiente</th><th>Estado</th></tr>
-      {% for r in resumen %}
-      <tr>
-        <td>{{ r.factura }}</td><td>{{ r.producto }}</td><td>{{ r.total }}</td>
-        <td>{{ r.entregado }}</td><td>{{ r.pendiente }}</td><td>{{ r.estado }}</td>
-      </tr>
-      {% endfor %}
-    </table>
-    <a href="/dashboard">Volver</a>
-  </body>
-</html>
+<h2>Estado de facturas</h2>
